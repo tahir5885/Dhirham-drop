@@ -24,6 +24,7 @@
     "build:extension": "npm run --workspace=apps/extension build",
     "match": "tsx scripts/match.ts",
     "sync:turso": "node scripts/sync-to-turso.mjs",
+    "sync:fast": "node scripts/fast-sync-prices.mjs",
     "refresh:prices": "node scripts/refresh-prices.mjs"
   },
   "keywords": [
