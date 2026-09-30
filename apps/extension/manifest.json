@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "DirhamDrop - UAE Price Comparison",
+  "version": "1.0.0",
+  "description": "Never overpay on UAE stores: Amazon.ae, Noon, Sharaf DG, Jumbo, Carrefour, Microless, Virgin Megastore, LuLu, Emax & Namshi. Real-time UAE price comparison.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.amazon.ae/*",
+    "https://*.noon.com/*",
+    "https://*.sharafdg.com/*",
+    "https://*.jumbo.ae/*",
+    "https://*.carrefouruae.com/*",
+    "https://*.microless.com/*",
+    "https://*.virginmegastore.ae/*",
+    "https://*.luluhypermarket.com/*",
+    "https://*.emaxme.com/*",
+    "https://*.namshi.com/*",
+    "http://localhost:3000/*",
+    "https://*.dirhamdrop.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DirhamDrop Price Comparison"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.amazon.ae/*",
+        "https://*.noon.com/*",
+        "https://*.sharafdg.com/*",
+        "https://*.jumbo.ae/*",
+        "https://*.carrefouruae.com/*",
+        "https://*.microless.com/*",
+        "https://*.virginmegastore.ae/*",
+        "https://*.luluhypermarket.com/*",
+        "https://*.emaxme.com/*",
+        "https://*.namshi.com/*"
+      ],
+      "js": [
+        "dist/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

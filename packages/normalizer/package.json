@@ -1,0 +1,16 @@
+{
+  "name": "@dirhamdrop/normalizer",
+  "version": "1.0.0",
+  "description": "Product title normalization and fuzzy matching engine for DirhamDrop",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "@types/node": "^22.5.5"
+  }
+}

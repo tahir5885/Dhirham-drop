@@ -1,0 +1,12 @@
+{
+  "name": "@dirhamdrop/extension",
+  "version": "1.0.0",
+  "description": "DirhamDrop Manifest V3 Chrome Extension for Amazon.ae and Noon.com",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^5.6.2"
+  }
+}

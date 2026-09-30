@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dirhamdrop-web
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dirhamdrop_production_secret_key_change_me_12345}
+      - DATABASE_URL=${DATABASE_URL:-file:./dev.db}
+      - SCRAPERING_API_KEY=${SCRAPERING_API_KEY:-default_1nO6On_qD_SOmqBd5U5KcP805pIlC0-UYMdgD7Rez7Y}
+      - AMAZON_AFFILIATE_TAG=${AMAZON_AFFILIATE_TAG:-dirhamdrop-21}
+      - NOON_AFFILIATE_CODE=${NOON_AFFILIATE_CODE:-DIRHAMDROP}
+      - EXTENSION_API_KEY=${EXTENSION_API_KEY:-prod_secret_ext_key_dirhamdrop_2026}
+    volumes:
+      - dirhamdrop_sqlite_data:/app/packages/database/prisma
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dirhamdrop-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-dirhamdrop}
+    ports:
+      - '5432:5432'
+    volumes:
+      - dirhamdrop_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dirhamdrop_sqlite_data:
+    driver: local
+  dirhamdrop_pgdata:
+    driver: local

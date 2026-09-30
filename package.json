@@ -1,0 +1,39 @@
+{
+  "name": "dirhamdrop-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DirhamDrop - The Smart Price Comparison & Deal Intelligence Engine for UAE & GCC",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run --workspace=apps/web dev",
+    "start": "npm run --workspace=apps/web start",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npm run --workspace=packages/database generate",
+    "db:seed": "npm run --workspace=packages/database seed",
+    "test:normalizer": "npm run --workspace=packages/normalizer test",
+    "crawl:mock": "npm run --workspace=apps/crawlers crawl:mock",
+    "crawl:track": "npm run --workspace=apps/crawlers crawl:track",
+    "crawl:scheduler": "npm run --workspace=apps/crawlers crawl:scheduler",
+    "crawl:daemon": "npm run --workspace=apps/crawlers crawl:daemon",
+    "crawl:all": "npm run --workspace=apps/crawlers crawl:all",
+    "build:extension": "npm run --workspace=apps/extension build",
+    "match": "tsx scripts/match.ts"
+  },
+  "keywords": [
+    "dirhamdrop",
+    "price-comparison",
+    "uae",
+    "amazon-ae",
+    "noon",
+    "prisma",
+    "nextjs",
+    "chrome-extension"
+  ],
+  "author": "DirhamDrop Team",
+  "license": "MIT"
+}

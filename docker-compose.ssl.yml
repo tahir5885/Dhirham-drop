@@ -1,0 +1,34 @@
+version: '3.8'
+
+# Overlay file for production automatic SSL certificates with Caddy
+# Run: DOMAIN=yourdomain.com docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d --build
+
+services:
+  web:
+    # In SSL mode, internal web port does not need to be exposed directly to the internet
+    ports: []
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dirhamdrop-ssl
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - dirhamdrop_caddy_data:/data
+      - dirhamdrop_caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  dirhamdrop_caddy_data:
+    driver: local
+  dirhamdrop_caddy_config:
+    driver: local

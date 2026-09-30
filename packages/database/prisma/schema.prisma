@@ -1,0 +1,167 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// StockStatus enum removed for SQLite, using String instead
+
+/// The single canonical source-of-truth product representing a real-world SKU
+model ProductCanonical {
+  id             String            @id @default(cuid())
+  brand          String            // e.g., "Apple", "Samsung", "Sony", "Dyson"
+  model          String?           // e.g., "iPhone 15 Pro Max", "WH-1000XM5"
+  normalizedName String            // Sanitized product title without retailer fluff
+  canonicalKey   String            @unique // Unique deterministic hash or slug (e.g., "apple-iphone-15-pro-max-256gb-natural-titanium")
+  category       String?           // e.g., "Smartphones", "Headphones", "Hair Care"
+  ean            String?           // European Article Number (Barcode)
+  upc            String?           // Universal Product Code
+  imageUrl       String?           // High-resolution reference product image
+  attributes     String?           // Extracted specs as JSON string: { color: "Natural Titanium", storage: "256GB", ram: "8GB" }
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  listings       RetailerListing[]
+  alerts         UserAlert[]
+
+  @@index([brand])
+  @@index([model])
+  @@index([normalizedName])
+  @@index([canonicalKey])
+  @@map("product_canonical")
+}
+
+/// Registered retailers in the UAE / GCC ecosystem (Amazon.ae, Noon.com, Namshi, Sharaf DG, etc.)
+model Retailer {
+  id                   String            @id @default(cuid())
+  name                 String            // e.g., "Amazon UAE", "Noon UAE"
+  slug                 String            @unique // e.g., "amazon_ae", "noon_ae"
+  domain               String            // e.g., "amazon.ae", "noon.com"
+  logoUrl              String?
+  affiliateParamKey    String?           // e.g., "tag" for Amazon, "utm_source" or sub-id
+  affiliateParamValue  String?           // e.g., "dirhamdrop-21"
+  isActive             Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  listings             RetailerListing[]
+
+  @@map("retailer")
+}
+
+/// Individual product page listing scraped from a retailer
+model RetailerListing {
+  id                   String           @id @default(cuid())
+  canonicalProductId   String
+  canonicalProduct     ProductCanonical @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+  retailerId           String
+  retailer             Retailer         @relation(fields: [retailerId], references: [id], onDelete: Cascade)
+  sku                  String           // Retailer-specific identifier: Amazon ASIN (e.g., B0CHWZ84DV) or Noon SKU (N53346853A)
+  url                  String           // Direct product URL on the retailer platform
+  rawTitle             String           // Raw title extracted directly from the retailer page
+  currentPrice         Decimal          // Current selling price in AED
+  originalPrice        Decimal?         // Strikethrough / list price before discount
+  currency             String           @default("AED")
+  stockStatus          String           @default("IN_STOCK")
+  rating               Float?           // e.g., 4.6
+  reviewCount          Int?             // e.g., 1420
+  sellerName           String?          // e.g., "Amazon.ae", "Noon", or 3rd-party marketplace seller
+  isFulfilledByRetailer Boolean         @default(false) // Amazon Prime / Fulfilled by Amazon / Noon Express
+  lastCheckedAt        DateTime         @default(now())
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  priceHistory         PriceHistory[]
+
+  @@unique([retailerId, sku])
+  @@index([canonicalProductId])
+  @@index([sku])
+  @@index([currentPrice])
+  @@map("retailer_listing")
+}
+
+/// Time-series historical price log for price charts and deal-drop alerts
+model PriceHistory {
+  id          String          @id @default(cuid())
+  listingId   String
+  listing     RetailerListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  price       Decimal
+  currency    String          @default("AED")
+  stockStatus String          @default("IN_STOCK")
+  recordedAt  DateTime        @default(now())
+
+  @@index([listingId, recordedAt])
+  @@map("price_history")
+}
+
+/// User price-drop alerts triggered when a product drops below target price
+model UserAlert {
+  id                 String           @id @default(cuid())
+  userEmail          String
+  canonicalProductId String
+  canonicalProduct   ProductCanonical @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+  targetPrice        Decimal
+  currency           String           @default("AED")
+  isActive           Boolean          @default(true)
+  isTriggered        Boolean          @default(false)
+  lastNotifiedAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  userId             String?
+  user               User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userEmail])
+  @@index([userId])
+  @@index([canonicalProductId, isActive])
+  @@map("user_alert")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  alerts        UserAlert[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

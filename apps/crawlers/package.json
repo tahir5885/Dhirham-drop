@@ -1,0 +1,31 @@
+{
+  "name": "@dirhamdrop/crawlers",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stealth crawlers for Amazon.ae and Noon.com with proxy pooling and Prisma ingestion",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "crawl:amazon": "tsx src/cli.ts --retailer=amazon",
+    "crawl:noon": "tsx src/cli.ts --retailer=noon",
+    "crawl:all": "tsx src/cli.ts --all",
+    "crawl:product": "tsx src/cli.ts",
+    "crawl:track": "tsx src/cli.ts --track",
+    "crawl:mock": "tsx src/cli.ts --mock",
+    "crawl:scheduler": "tsx src/scheduler.ts",
+    "crawl:daemon": "tsx src/scheduler.ts --interval=3600"
+  },
+  "dependencies": {
+    "@dirhamdrop/database": "*",
+    "@dirhamdrop/normalizer": "*",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.47.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "@types/node": "^22.5.5"
+  }
+}

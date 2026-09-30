@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Prisma
+packages/database/prisma/*.db
+packages/database/prisma/*.db-journal
+
+# Playwright & Scraper artifacts
+playwright-report/
+test-results/
+screenshots/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tsbuildinfo
