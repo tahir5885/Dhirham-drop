@@ -85,11 +85,45 @@ export default function ProductDetailPage() {
   // Buyhatke Top 3 and Coupon state
   const [showAllStores, setShowAllStores] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2500);
+  };
+
+  const handleRefreshLivePrice = async () => {
+    setRefreshing(true);
+    setRefreshMessage('Scanning Amazon.ae, Noon.com & Sharaf DG in real-time...');
+    try {
+      const res = await fetch(`/api/product/${product?.id || id}/refresh`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setProduct((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            lowestPrice: data.lowestPrice,
+            highestPrice: data.highestPrice,
+            lowestRetailer: data.lowestRetailer,
+            savingsAed: data.savingsAed,
+            listings: data.listings,
+          };
+        });
+        setRefreshMessage('✅ Live prices updated directly from stores!');
+        setTimeout(() => setRefreshMessage(null), 4000);
+      } else {
+        setRefreshMessage('⚠️ Live scan busy, using latest cached prices');
+        setTimeout(() => setRefreshMessage(null), 3000);
+      }
+    } catch {
+      setRefreshMessage('⚠️ Network error checking stores');
+      setTimeout(() => setRefreshMessage(null), 3000);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -203,7 +237,7 @@ export default function ProductDetailPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button
           onClick={() => router.push('/')}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
@@ -212,9 +246,26 @@ export default function ProductDetailPage() {
           <span>Back to All Comparisons</span>
         </button>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Verified UAE Live Comparison</span>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {refreshMessage && (
+            <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-300 animate-pulse">
+              {refreshMessage}
+            </span>
+          )}
+
+          <button
+            onClick={handleRefreshLivePrice}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            <Zap className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Scanning UAE Stores...' : '⚡ Check Live Price Now'}</span>
+          </button>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Verified UAE Live Comparison</span>
+          </div>
         </div>
       </div>
 

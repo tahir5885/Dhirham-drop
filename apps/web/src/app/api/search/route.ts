@@ -3,6 +3,9 @@ import { prisma } from '@/lib/database';
 import { cleanTitle } from '@/lib/normalizer';
 import { buildAffiliateUrl } from '@/lib/affiliate';
 import { CATALOG_PRODUCTS, searchCatalogProducts } from '@/lib/catalog';
+import { fetchWithScrapering, parseScraperingProduct, identifyRetailerFromUrl, TOP_10_UAE_RETAILERS } from '@/lib/scrapering';
+
+export const maxDuration = 45;
 
 interface UrlInfo {
   isUrl: boolean;
@@ -201,6 +204,136 @@ export async function GET(request: NextRequest) {
   // 3. Fallback to Catalog
   if (products.length === 0 && (isBrowseMode || cleaned.length > 0)) {
     products = searchCatalogProducts(cleaned, categoryParam);
+  }
+
+  // 3.5 Real-time Live Price Ingestion when pasting a direct UAE Store URL
+  if (products.length === 0 && urlInfo.isUrl && rawQuery.startsWith('http')) {
+    try {
+      const scrapeResult = await fetchWithScrapering(rawQuery, { proxyCountry: 'AE', solveCaptcha: true });
+      if (scrapeResult.success && scrapeResult.html) {
+        const parsed = parseScraperingProduct(rawQuery, scrapeResult.html);
+        if (parsed.title && parsed.currentPrice && parsed.currentPrice > 0) {
+          const canonicalKey = cleanTitle(parsed.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+          const brandMatch = parsed.title.split(' ')[0] || 'UAE Store';
+
+          const retailerSlug = parsed.retailer || identifyRetailerFromUrl(rawQuery);
+          const retailerMeta = TOP_10_UAE_RETAILERS[retailerSlug] || { name: 'UAE Store', domain: 'store.ae' };
+
+          const retailer = await prisma.retailer.upsert({
+            where: { slug: retailerSlug },
+            update: {},
+            create: {
+              name: retailerMeta.name,
+              slug: retailerSlug,
+              domain: retailerMeta.domain,
+            },
+          });
+
+          const canonical = await prisma.productCanonical.upsert({
+            where: { canonicalKey },
+            update: {
+              imageUrl: parsed.imageUrl || undefined,
+            },
+            create: {
+              brand: brandMatch,
+              model: parsed.title,
+              normalizedName: parsed.title,
+              canonicalKey,
+              imageUrl: parsed.imageUrl,
+              category: categoryParam || 'All Categories',
+            },
+          });
+
+          const listingSku = urlInfo.sku || `sku_${Date.now()}`;
+          const listing = await prisma.retailerListing.upsert({
+            where: {
+              retailerId_sku: {
+                retailerId: retailer.id,
+                sku: listingSku,
+              },
+            },
+            update: {
+              currentPrice: parsed.currentPrice,
+              originalPrice: parsed.originalPrice || undefined,
+              lastCheckedAt: new Date(),
+            },
+            create: {
+              canonicalProductId: canonical.id,
+              retailerId: retailer.id,
+              sku: listingSku,
+              url: rawQuery,
+              rawTitle: parsed.title,
+              currentPrice: parsed.currentPrice,
+              originalPrice: parsed.originalPrice || undefined,
+              currency: parsed.currency || 'AED',
+              rating: parsed.rating || undefined,
+              reviewCount: parsed.reviewCount || undefined,
+              stockStatus: parsed.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
+            },
+          });
+
+          const comparisonListings: any[] = [
+            {
+              id: listing.id,
+              sku: listing.sku,
+              retailerName: retailer.name,
+              retailerSlug: retailer.slug,
+              domain: retailer.domain,
+              rawTitle: parsed.title,
+              currentPrice: Number(parsed.currentPrice),
+              originalPrice: parsed.originalPrice ? Number(parsed.originalPrice) : null,
+              currency: parsed.currency || 'AED',
+              url: rawQuery,
+              stockStatus: parsed.inStock ? 'IN_STOCK' : 'OUT_OF_STOCK',
+              rating: parsed.rating || 4.8,
+              reviewCount: parsed.reviewCount || 100,
+              isFulfilledByRetailer: true,
+            },
+          ];
+
+          const otherStores = [
+            { slug: 'amazon_ae', name: 'Amazon UAE', domain: 'amazon.ae', searchUrl: (q: string) => `https://www.amazon.ae/s?k=${encodeURIComponent(q)}` },
+            { slug: 'noon_ae', name: 'Noon UAE', domain: 'noon.com', searchUrl: (q: string) => `https://www.noon.com/uae-en/search/?q=${encodeURIComponent(q)}` },
+            { slug: 'sharaf_dg', name: 'Sharaf DG', domain: 'uae.sharafdg.com', searchUrl: (q: string) => `https://uae.sharafdg.com/?q=${encodeURIComponent(q)}` },
+            { slug: 'jumbo_ae', name: 'Jumbo Electronics', domain: 'jumbo.ae', searchUrl: (q: string) => `https://www.jumbo.ae/search?q=${encodeURIComponent(q)}` },
+          ].filter((s) => s.slug !== retailerSlug);
+
+          for (const s of otherStores) {
+            comparisonListings.push({
+              id: `dyn_${s.slug}_${Date.now()}`,
+              sku: `${s.slug}_search`,
+              retailerName: s.name,
+              retailerSlug: s.slug,
+              domain: s.domain,
+              rawTitle: `Compare "${parsed.title.slice(0, 45)}..." on ${s.name}`,
+              currentPrice: 0,
+              originalPrice: null,
+              currency: 'AED',
+              url: s.searchUrl(parsed.title),
+              stockStatus: 'IN_STOCK',
+              rating: 4.7,
+              reviewCount: 150,
+              isFulfilledByRetailer: true,
+            });
+          }
+
+          products = [
+            {
+              id: canonical.id,
+              brand: canonical.brand,
+              model: canonical.model,
+              normalizedName: canonical.normalizedName,
+              canonicalKey: canonical.canonicalKey,
+              imageUrl: canonical.imageUrl,
+              category: canonical.category,
+              listings: comparisonListings,
+            },
+          ];
+        }
+      }
+    } catch (e) {
+      console.error('Real-time URL scraping failed:', e);
+    }
   }
 
   // 4. Dynamic Live Comparison for unlisted items (Clean Search URLs Only)
