@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 
 const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'dirhamdrop_fallback_production_secret_key_uae_2026',

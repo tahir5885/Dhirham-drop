@@ -1,4 +1,4 @@
-import { prisma } from '../index.js';
+import { prisma } from '../index';
 
 export const StockStatus = {
   IN_STOCK: 'IN_STOCK',

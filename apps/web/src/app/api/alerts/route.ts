@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 import { sendPriceDropEmail } from '@/lib/notifications';
 
 // In-memory fallback alert store when PostgreSQL is offline

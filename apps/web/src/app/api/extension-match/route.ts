@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { normalizeProductTitle, fuzzyMatch } from '@dirhamdrop/normalizer';
+import { normalizeProductTitle, fuzzyMatch } from '@/lib/normalizer';
 import { buildAffiliateUrl } from '@/lib/affiliate';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

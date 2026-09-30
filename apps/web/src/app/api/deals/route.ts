@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 import { buildAffiliateUrl } from '@/lib/affiliate';
 
 export async function GET() {

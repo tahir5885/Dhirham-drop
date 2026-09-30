@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@dirhamdrop/database';
+import { prisma } from '@/lib/database';
 import { buildAffiliateUrl } from '@/lib/affiliate';
 import { getCatalogProductById, CATALOG_PRODUCTS } from '@/lib/catalog';
 

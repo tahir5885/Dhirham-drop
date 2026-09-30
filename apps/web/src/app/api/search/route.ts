@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@dirhamdrop/database';
-import { cleanTitle } from '@dirhamdrop/normalizer';
+import { prisma } from '@/lib/database';
+import { cleanTitle } from '@/lib/normalizer';
 import { buildAffiliateUrl } from '@/lib/affiliate';
 import { CATALOG_PRODUCTS, searchCatalogProducts } from '@/lib/catalog';
 
