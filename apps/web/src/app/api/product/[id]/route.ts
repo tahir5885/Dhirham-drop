@@ -90,24 +90,38 @@ export async function GET(
     return NextResponse.json({ error: 'Product not found' }, { status: 404 });
   }
 
-  // Calculate pricing statistics
-  const prices = product.listings
-    .map((l: any) => l.currentPrice)
-    .filter((p: number) => p > 0);
-  const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const highestPrice = prices.length > 0 ? Math.max(...prices) : 0;
-  const lowestListing = product.listings.find(
-    (l: any) => l.currentPrice === lowestPrice
-  );
+  // Deduplicate listings by retailer: keep 1 best direct listing per retailer
+  const seenRetailers = new Set<string>();
+  const uniqueListings: any[] = [];
 
-  // Wrap listings with affiliate links and sort by price ascending
   const sortedListings = [...product.listings].sort((a: any, b: any) => {
+    const isSearchA = a.url?.includes('/s?k=') || a.url?.includes('/search/?') || a.url?.includes('/search?');
+    const isSearchB = b.url?.includes('/s?k=') || b.url?.includes('/search/?') || b.url?.includes('/search?');
+    if (isSearchA && !isSearchB) return 1;
+    if (!isSearchA && isSearchB) return -1;
+
     const pA = a.currentPrice > 0 ? a.currentPrice : Infinity;
     const pB = b.currentPrice > 0 ? b.currentPrice : Infinity;
     return pA - pB;
   });
 
-  const enrichedListings = sortedListings.map((l: any) => {
+  for (const l of sortedListings) {
+    if (!seenRetailers.has(l.retailerSlug)) {
+      seenRetailers.add(l.retailerSlug);
+      uniqueListings.push(l);
+    }
+  }
+
+  const prices = uniqueListings
+    .map((l: any) => l.currentPrice)
+    .filter((p: number) => p > 0);
+  const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const highestPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const lowestListing = uniqueListings.find(
+    (l: any) => l.currentPrice === lowestPrice
+  );
+
+  const enrichedListings = uniqueListings.map((l: any) => {
     const affiliate = buildAffiliateUrl(l.url, l.retailerSlug);
     return {
       ...l,

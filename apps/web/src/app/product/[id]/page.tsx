@@ -34,6 +34,7 @@ interface Listing {
   originalPrice: number | null;
   currency: string;
   buyUrl: string;
+  url?: string;
   stockStatus: string;
   rating: number | null;
   reviewCount: number | null;
@@ -373,12 +374,32 @@ export default function ProductDetailPage() {
             </div>
 
             {(() => {
+              // Deduplicate listings by retailer: keep 1 best direct listing per retailer
+              const seenRetailers = new Set<string>();
+              const uniqueListings: Listing[] = [];
+
               const sorted = [...product.listings].sort((a, b) => {
-                if (a.currentPrice > 0 && b.currentPrice > 0) return a.currentPrice - b.currentPrice;
-                return 0;
+                const urlA = a.buyUrl || a.url || '';
+                const urlB = b.buyUrl || b.url || '';
+                const isSearchA = urlA.includes('/s?k=') || urlA.includes('/search/?') || urlA.includes('/search?');
+                const isSearchB = urlB.includes('/s?k=') || urlB.includes('/search/?') || urlB.includes('/search?');
+                if (isSearchA && !isSearchB) return 1;
+                if (!isSearchA && isSearchB) return -1;
+
+                const pA = a.currentPrice > 0 ? a.currentPrice : Infinity;
+                const pB = b.currentPrice > 0 ? b.currentPrice : Infinity;
+                return pA - pB;
               });
-              const top3 = sorted.slice(0, 3);
-              const remaining = sorted.slice(3);
+
+              for (const l of sorted) {
+                if (!seenRetailers.has(l.retailerSlug)) {
+                  seenRetailers.add(l.retailerSlug);
+                  uniqueListings.push(l);
+                }
+              }
+
+              const top3 = uniqueListings.slice(0, 3);
+              const remaining = uniqueListings.slice(3);
               const lowest = top3[0];
               const availableCoupons = getCouponsForRetailer(lowest?.retailerSlug);
 

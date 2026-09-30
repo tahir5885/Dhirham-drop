@@ -17,6 +17,7 @@ interface Listing {
   originalPrice: number | null;
   currency: string;
   buyUrl: string;
+  url?: string;
   stockStatus: string;
   rating: number | null;
   reviewCount: number | null;
@@ -315,12 +316,33 @@ export default function HomePage() {
                     </div>
 
                     {(() => {
-                      const validListings = [...(product.listings || [])].sort((a, b) => {
-                        if (a.currentPrice > 0 && b.currentPrice > 0) return a.currentPrice - b.currentPrice;
-                        return 0;
+                      // Deduplicate listings by retailer: keep 1 best direct listing per retailer
+                      const seenRetailers = new Set<string>();
+                      const uniqueListings: Listing[] = [];
+
+                      const sorted = [...(product.listings || [])].sort((a, b) => {
+                        const urlA = a.buyUrl || a.url || '';
+                        const urlB = b.buyUrl || b.url || '';
+                        const isSearchA = urlA.includes('/s?k=') || urlA.includes('/search/?') || urlA.includes('/search?');
+                        const isSearchB = urlB.includes('/s?k=') || urlB.includes('/search/?') || urlB.includes('/search?');
+                        // Direct product URLs strictly take priority over generic search URLs
+                        if (isSearchA && !isSearchB) return 1;
+                        if (!isSearchA && isSearchB) return -1;
+
+                        const pA = a.currentPrice > 0 ? a.currentPrice : Infinity;
+                        const pB = b.currentPrice > 0 ? b.currentPrice : Infinity;
+                        return pA - pB;
                       });
-                      const top3 = validListings.slice(0, 3);
-                      const remaining = validListings.slice(3);
+
+                      for (const l of sorted) {
+                        if (!seenRetailers.has(l.retailerSlug)) {
+                          seenRetailers.add(l.retailerSlug);
+                          uniqueListings.push(l);
+                        }
+                      }
+
+                      const top3 = uniqueListings.slice(0, 3);
+                      const remaining = uniqueListings.slice(3);
                       const isExpanded = !!expandedProducts[product.id];
                       const lowest = top3[0];
                       const storeCoupons = lowest?.retailerSlug ? getCouponsForRetailer(lowest.retailerSlug) : [];

@@ -479,21 +479,38 @@ export async function GET(request: NextRequest) {
 
   // Format products with price statistics and wrapped affiliate links
   const formattedResults = products.map((item) => {
-    const sortedListings = [...item.listings].sort((a, b) => {
+    // Deduplicate by retailer: keep 1 best direct listing per retailer
+    const seenRetailers = new Set<string>();
+    const uniqueListings: any[] = [];
+
+    const sortedListings = [...item.listings].sort((a: any, b: any) => {
+      const isSearchA = a.url?.includes('/s?k=') || a.url?.includes('/search/?') || a.url?.includes('/search?');
+      const isSearchB = b.url?.includes('/s?k=') || b.url?.includes('/search/?') || b.url?.includes('/search?');
+      if (isSearchA && !isSearchB) return 1;
+      if (!isSearchA && isSearchB) return -1;
+
       const pA = a.currentPrice > 0 ? a.currentPrice : Infinity;
       const pB = b.currentPrice > 0 ? b.currentPrice : Infinity;
       return pA - pB;
     });
-    const validPricedListings = sortedListings.filter((l: any) => l.currentPrice > 0);
-    const lowest = validPricedListings.length > 0 ? validPricedListings[0] : sortedListings[0];
-    const highest = validPricedListings.length > 0 ? validPricedListings[validPricedListings.length - 1] : sortedListings[0];
+
+    for (const l of sortedListings) {
+      if (!seenRetailers.has(l.retailerSlug)) {
+        seenRetailers.add(l.retailerSlug);
+        uniqueListings.push(l);
+      }
+    }
+
+    const validPricedListings = uniqueListings.filter((l: any) => l.currentPrice > 0);
+    const lowest = validPricedListings.length > 0 ? validPricedListings[0] : uniqueListings[0];
+    const highest = validPricedListings.length > 0 ? validPricedListings[validPricedListings.length - 1] : uniqueListings[0];
     const savingsAed = highest && lowest && highest.currentPrice > lowest.currentPrice ? highest.currentPrice - lowest.currentPrice : 0;
     const savingsPercent =
       highest && lowest && highest.currentPrice > 0 && savingsAed > 0
         ? Math.round((savingsAed / highest.currentPrice) * 100)
         : 0;
 
-    const enrichedListings = sortedListings.map((l: any) => {
+    const enrichedListings = uniqueListings.map((l: any) => {
       const affiliate = buildAffiliateUrl(l.url, l.retailerSlug);
       return {
         ...l,
