@@ -22,7 +22,9 @@
     "crawl:daemon": "npm run --workspace=apps/crawlers crawl:daemon",
     "crawl:all": "npm run --workspace=apps/crawlers crawl:all",
     "build:extension": "npm run --workspace=apps/extension build",
-    "match": "tsx scripts/match.ts"
+    "match": "tsx scripts/match.ts",
+    "sync:turso": "node scripts/sync-to-turso.mjs",
+    "refresh:prices": "node scripts/refresh-prices.mjs"
   },
   "keywords": [
     "dirhamdrop",
@@ -35,5 +37,8 @@
     "chrome-extension"
   ],
   "author": "DirhamDrop Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  }
 }
